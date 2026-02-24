@@ -10,6 +10,16 @@
       "name": "bimsmarter-prompt",
       "source": "./bimsmarter-prompt",
       "description": "Framework elite pour créer et optimiser des prompts BIMSmarter (GID-Assistant, Workflow Generator, n8n agents)"
+    },
+    {
+      "name": "react-debug",
+      "source": "./react-debug",
+      "description": "Détection et correction des bugs React récurrents : focus loss, re-render, stale state, autocomplete"
+    },
+    {
+      "name": "mistral-proxy",
+      "source": "./mistral-proxy",
+      "description": "Architecture et maintenance du proxy PHP Mistral/Groq BIMSmarter avec fallback et rotation de clés"
     }
   ]
 }
