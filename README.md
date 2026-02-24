@@ -8,21 +8,20 @@ Skills personnels pour Claude Code — construits autour du stack BIMSmarter.
 /plugin marketplace add rcliment1987/skills
 ```
 
-Puis installe les skills que tu veux :
+Puis installe les skills :
 
 ```
 /plugin install bimsmarter-prompt@rcliment1987-skills
+/plugin install react-debug@rcliment1987-skills
+/plugin install mistral-proxy@rcliment1987-skills
 ```
 
 Redémarre la session. Les skills sont actifs dans tous tes projets.
 
 ## Skills disponibles
 
-| Skill | Description |
-|-------|-------------|
-| `bimsmarter-prompt` | Framework elite pour créer/optimiser des prompts (GID-Assistant, n8n, Mistral, Groq) |
-
-## En cours de construction
-
-- `react-debug` — Détection anti-patterns React (focus loss, composants redéfinis dans parent)
-- `mistral-proxy` — Architecture PHP proxy avec fallback Groq et rotation de clés
+| Skill | Se déclenche quand... |
+|-------|----------------------|
+| `bimsmarter-prompt` | Tu veux créer/optimiser un prompt pour GID-Assistant, n8n, Mistral |
+| `react-debug` | Focus loss, re-render, autocomplete bugué, stale state |
+| `mistral-proxy` | Erreur 429, config proxy PHP, fallback Groq, migration API |
