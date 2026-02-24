@@ -1,0 +1,15 @@
+{
+  "name": "rcliment1987-skills",
+  "owner": {
+    "name": "Renaud Climent",
+    "github": "rcliment1987"
+  },
+  "description": "Skills personnels BIMSmarter — prompt engineering, debug React, stack Mistral/Groq",
+  "plugins": [
+    {
+      "name": "bimsmarter-prompt",
+      "source": "./bimsmarter-prompt",
+      "description": "Framework elite pour créer et optimiser des prompts BIMSmarter (GID-Assistant, Workflow Generator, n8n agents)"
+    }
+  ]
+}
