@@ -14,6 +14,9 @@ Puis installe les skills :
 /plugin install bimsmarter-prompt@rcliment1987-skills
 /plugin install react-debug@rcliment1987-skills
 /plugin install mistral-proxy@rcliment1987-skills
+/plugin install bimsmarter-ui@rcliment1987-skills
+/plugin install bimsmarter-n8n@rcliment1987-skills
+/plugin install bimsmarter-firebase@rcliment1987-skills
 ```
 
 Redémarre la session. Les skills sont actifs dans tous tes projets.
@@ -24,4 +27,7 @@ Redémarre la session. Les skills sont actifs dans tous tes projets.
 |-------|----------------------|
 | `bimsmarter-prompt` | Tu veux créer/optimiser un prompt pour GID-Assistant, n8n, Mistral |
 | `react-debug` | Focus loss, re-render, autocomplete bugué, stale state |
-| `mistral-proxy` | Erreur 429, config proxy PHP, fallback Groq, migration API |
+| `mistral-proxy` | Erreur 429, config proxy PHP, fallback Groq, Perplexity |
+| `bimsmarter-ui` | Nouvelle page/composant, mise en cohérence style, charte graphique |
+| `bimsmarter-n8n` | Workflows n8n, webhooks inter-apps, RAG Supabase, format JSON agents |
+| `bimsmarter-firebase` | Firestore queries, règles sécurité, scalabilité IFC, Firebase Auth |
