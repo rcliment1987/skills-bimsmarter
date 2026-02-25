@@ -11,9 +11,13 @@ description: Charte graphique et composants UI BIMSmarter. Utilise ce skill quan
 ## Fond de page principal
 
 Fond bleu foncé : hsl(222 47% 11%) (équivalent #0f172a)
+
 Pattern de petites croix/points cyan subtils en arrière-plan
+
 Les croix utilisent : hsl(199 89% 48% / 0.15) (cyan transparent)
+
 Espacement du pattern : 24px x 24px
+
 Créer une classe CSS .bg-bimsmarter avec :
 
 ## Tokens de couleur
