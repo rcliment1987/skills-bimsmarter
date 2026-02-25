@@ -8,6 +8,13 @@ description: Charte graphique et composants UI BIMSmarter. Utilise ce skill quan
 **Règle absolue** : toute nouvelle page ou composant doit respecter cette charte. Ne jamais inventer un style différent.
 
 ---
+## Fond de page principal
+
+Fond bleu foncé : hsl(222 47% 11%) (équivalent #0f172a)
+Pattern de petites croix/points cyan subtils en arrière-plan
+Les croix utilisent : hsl(199 89% 48% / 0.15) (cyan transparent)
+Espacement du pattern : 24px x 24px
+Créer une classe CSS .bg-bimsmarter avec :
 
 ## Tokens de couleur
 
@@ -124,6 +131,8 @@ table.data-dense td {
 - **Texte secondaire/muted** : `text-gray-400`
 - **Code/monospace** : `font-mono text-[hsl(199,89%,48%)]`
 - Taille h1 : `text-2xl`, h2 : `text-xl`, h3 : `text-lg`
+- Police principale : Roboto (Google Fonts)
+Import : @import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap");
 
 ---
 
