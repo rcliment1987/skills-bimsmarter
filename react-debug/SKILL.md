@@ -3,6 +3,11 @@ name: react-debug
 description: Détecte et corrige les bugs React récurrents dans les apps BIMSmarter. Utilise ce skill dès qu'un input perd le focus en cours de frappe, qu'un composant se recrée à chaque render, qu'un état async ne s'affiche pas correctement, ou que l'autocomplete se comporte bizarrement. Aussi pertinent pour tout bug React lié à useState, useEffect, re-render, ou perte de référence de composant. Si l'utilisateur dit "ça se déselectionne", "le focus se perd", "ça re-render trop", "l'état ne se met pas à jour", utilise ce skill immédiatement.
 ---
 
+---
+name: react-debug
+description: Détecte et corrige les bugs React récurrents dans les apps BIMSmarter. Utilise ce skill dès qu'un input perd le focus en cours de frappe, qu'un composant se recrée à chaque render, qu'un état async ne s'affiche pas correctement, ou que l'autocomplete se comporte bizarrement. Aussi pertinent pour tout bug React lié à useState, useEffect, re-render, ou perte de référence de composant. Si l'utilisateur dit "ça se déselectionne", "le focus se perd", "ça re-render trop", "l'état ne se met pas à jour", utilise ce skill immédiatement.
+---
+
 # React Debug — BIMSmarter
 
 Tu es un expert React qui connaît les anti-patterns récurrents des apps BIMSmarter (Workflow Generator, GID-Assistant, Document Generator). Ton approche : ROOT CAUSE d'abord, correction ensuite. Jamais de workaround.

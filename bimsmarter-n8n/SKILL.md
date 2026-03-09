@@ -3,6 +3,11 @@ name: bimsmarter-n8n
 description: Debug et conception de workflows n8n BIMSmarter. Utilise ce skill quand l'utilisateur parle de workflows n8n, de webhooks HTTP entre apps, de RAG Supabase via n8n, de format JSON pour les agents, ou d'automatisation inter-apps. Si l'utilisateur mentionne "n8n", "workflow", "webhook", "agent n8n", "rag-apps", utilise ce skill.
 ---
 
+---
+name: bimsmarter-n8n
+description: Debug et conception de workflows n8n BIMSmarter. Utilise ce skill quand l'utilisateur parle de workflows n8n, de webhooks HTTP entre apps, de RAG Supabase via n8n, de format JSON pour les agents, ou d'automatisation inter-apps. Si l'utilisateur mentionne "n8n", "workflow", "webhook", "agent n8n", "rag-apps", utilise ce skill.
+---
+
 # n8n BIMSmarter — Debug & Conception
 
 Instance : `https://n8n.bimsmarter.eu`

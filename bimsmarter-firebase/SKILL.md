@@ -3,6 +3,11 @@ name: bimsmarter-firebase
 description: Patterns Firebase et Firestore pour les apps BIMSmarter. Utilise ce skill quand l'utilisateur parle de Firestore, Firebase Auth, règles de sécurité, requêtes lentes, structure de données, ou erreurs Firebase. Si l'utilisateur mentionne "Firestore", "Firebase", "règles sécurité", "requête lente", "collection", "document Firebase", utilise ce skill.
 ---
 
+---
+name: bimsmarter-firebase
+description: Patterns Firebase et Firestore pour les apps BIMSmarter. Utilise ce skill quand l'utilisateur parle de Firestore, Firebase Auth, règles de sécurité, requêtes lentes, structure de données, ou erreurs Firebase. Si l'utilisateur mentionne "Firestore", "Firebase", "règles sécurité", "requête lente", "collection", "document Firebase", utilise ce skill.
+---
+
 # Firebase BIMSmarter — Firestore & Auth
 
 Stack : Firebase (Auth + Firestore + Storage) sur les 3 apps BIMSmarter.
@@ -100,36 +105,110 @@ await batch.commit(); // max 500 docs par batch
 
 ## Règles de sécurité Firestore
 
-### Pattern de base BIMSmarter
+### Règles de production actuelles (v2 — avec protection plan Stripe)
+
+> ⚠️ Ces règles sont les règles **de production** déployées sur Firebase.
+> Ne pas simplifier — chaque restriction est intentionnelle (voir commentaires).
+
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // User peut lire/modifier uniquement son profil
-    match /users/{uid} {
-      allow read, write: if request.auth.uid == uid;
+    // ─────────────────────────────────────────────
+    // FONCTIONS UTILITAIRES
+    // ─────────────────────────────────────────────
+
+    // Champs autorisés côté client : displayName, lastSeen, favoriteWorkflows, aiQuota.
+    // Le plan, stripeCustomerId et role sont BLOQUÉS — seul N8N via Admin SDK peut les modifier.
+    function safeUserFields() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['displayName', 'lastSeen', 'favoriteWorkflows', 'aiQuota']);
     }
 
-    // Projets : accès membres uniquement
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Vérifie membership dans la liste members[] du projet parent (pour sous-collections)
+    function isMember(projectId) {
+      return request.auth != null
+          && request.auth.uid in get(
+               /databases/$(database)/documents/projects/$(projectId)
+             ).data.members;
+    }
+
+    // ─────────────────────────────────────────────
+    // COLLECTION : users
+    // ─────────────────────────────────────────────
+    match /users/{userId} {
+      // Lecture : tout user connecté (nécessaire pour vérifier le plan d'un invité)
+      allow read: if request.auth != null;
+
+      // Création : uniquement son propre doc, plan forcé à 'free'
+      // → empêche de se créer directement un compte Pro/Admin
+      allow create: if isOwner(userId)
+                    && request.resource.data.plan == 'free';
+
+      // Mise à jour : uniquement champs non-sensibles (safeUserFields)
+      // → plan et stripeCustomerId ne peuvent être modifiés que par N8N/Admin SDK
+      allow update: if isOwner(userId) && safeUserFields();
+
+      // Suppression : interdite depuis le client
+      allow delete: if false;
+    }
+
+    // Workflows personnels d'un user (distincts des workflows de projet)
+    match /users/{userId}/workflows/{workflowId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ─────────────────────────────────────────────
+    // COLLECTION : projects
+    // ─────────────────────────────────────────────
     match /projects/{projectId} {
-      allow read: if request.auth.uid in resource.data.members;
-      allow create: if request.auth != null;
-      allow update: if request.auth.uid in resource.data.members;
-      allow delete: if request.auth.uid == resource.data.createdBy;
+      // Lecture : membres uniquement (members[] inclut ownerId + invités)
+      allow read: if request.auth != null
+                  && request.auth.uid in resource.data.members;
 
-      // Sous-collections héritent de la règle parent
-      match /documents/{docId} {
-        allow read, write: if request.auth.uid in get(/databases/$(database)/documents/projects/$(projectId)).data.members;
-      }
+      // Création : tout user connecté, doit se déclarer ownerId
+      // La limite projets (Free=1, Pro=5) est gérée par PlanManager côté app
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.ownerId;
+
+      // Mise à jour : uniquement le propriétaire
+      allow update: if request.auth != null
+                    && request.auth.uid == resource.data.ownerId;
+
+      // Suppression : uniquement le propriétaire
+      allow delete: if request.auth != null
+                    && request.auth.uid == resource.data.ownerId;
     }
 
-    // Workflows : propriétaire uniquement
-    match /workflows/{workflowId} {
-      allow read, write: if request.auth.uid == resource.data.createdBy;
+    // Workflows d'un projet partagé (étapes BIM, livrables)
+    match /projects/{projectId}/workflows/{workflowId} {
+      allow read, write: if isMember(projectId);
     }
+
+    // Documents ISO 19650 d'un projet partagé
+    match /projects/{projectId}/documents/{docId} {
+      allow read, write: if isMember(projectId);
+    }
+
   }
 }
+```
+
+### Points clés de sécurité
+
+- **`plan` non modifiable côté client** : `safeUserFields()` bloque `plan`, `stripeCustomerId`, `role`. Seul N8N via Admin SDK peut les modifier (webhooks Stripe upgrade/downgrade).
+- **Création compte** : forcé à `plan: 'free'` — impossible de se créer un compte Pro en manipulant la requête.
+- **Membres vs propriétaire** : les invités peuvent lire un projet mais pas le modifier (seul `ownerId` a le droit `update`/`delete`).
+- **Limite projets** : gérée par `PlanManager` côté app, pas dans les règles Firestore (Firestore ne peut pas compter les documents facilement).
+
+### Déploiement
+```bash
+firebase deploy --only firestore:rules
 ```
 
 ---
