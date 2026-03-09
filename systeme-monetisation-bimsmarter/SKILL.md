@@ -55,6 +55,36 @@ BIMSmarter est un écosystème de 6 applications web partageant le même projet 
 - **Les limites de projets** : nombre de projets créables (gestion-projet uniquement)
 - **Les droits de partage** : collaboration et invitations (Pro/Enterprise uniquement)
 
+### Architecture Proxy — Pattern d'indirection à 3 couches
+
+**Principe** : Clés API + logique partagée centralisées, chaque app a son proxy local.
+
+```
+Couche partagée (source de vérité unique)
+/home/u313130122/shared/
+  ├── mistral-proxy.php           ← Appels Mistral API
+  ├── stripe-checkout.php         ← Création session Stripe
+  ├── stripe-portal.php           ← Portail client Stripe
+  └── vendor/                     ← Dépendances Composer (autoload.php)
+
+Couche locale (chaque app a son proxy)
+gestion-projet/
+  ├── stripe-checkout-local.php   ← Appelle /shared/stripe-checkout.php
+  ├── stripe-portal-local.php     ← Appelle /shared/stripe-portal.php
+  └── mistral-proxy-local.php     ← Appelle /shared/mistral-proxy.php
+
+gid-assistant/
+  ├── stripe-checkout-local.php
+  ├── stripe-portal-local.php
+  └── mistral-proxy-local.php
+
+[autres apps] → même pattern
+```
+
+**Avantage** : Modification des clés API ou logique = un seul fichier à changer. Chaque app peut ajouter sa propre logique avant/après si besoin.
+
+**Nommage convention** : `*-local.php` pour tous les fichiers proxy locaux (exemple : `stripe-checkout-local.php`, `mistral-proxy-local.php`, `stripe-portal-local.php`)
+
 ### Firebase config commune à toutes les apps
 
 ```javascript
