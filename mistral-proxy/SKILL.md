@@ -3,11 +3,6 @@ name: mistral-proxy
 description: Architecture et maintenance du proxy PHP BIMSmarter (shared/mistral-proxy.php v5.1) qui centralise les appels Mistral, Perplexity et Groq fallback pour toutes les apps. Utilise ce skill quand l'utilisateur parle de son proxy PHP, d'erreurs 429, de timeout N8N, de Perplexity, de Groq fallback, de déploiement sur une nouvelle app, ou de debug des réponses vides. Si l'utilisateur mentionne "proxy", "mistral-proxy.php", "l'IA ne répond plus", "429", utilise ce skill.
 ---
 
----
-name: mistral-proxy
-description: Architecture et maintenance du proxy PHP BIMSmarter (shared/mistral-proxy.php v5.1) qui centralise les appels Mistral, Perplexity et Groq fallback pour toutes les apps. Utilise ce skill quand l'utilisateur parle de son proxy PHP, d'erreurs 429, de timeout N8N, de Perplexity, de Groq fallback, de déploiement sur une nouvelle app, ou de debug des réponses vides. Si l'utilisateur mentionne "proxy", "mistral-proxy.php", "l'IA ne répond plus", "429", utilise ce skill.
----
-
 # Mistral Proxy — BIMSmarter (v5.1)
 
 Proxy PHP centralisé dans `/home/u313130122/shared/mistral-proxy.php`. Chaque app a son propre `mistral-proxy.php` minimaliste qui fait juste :
