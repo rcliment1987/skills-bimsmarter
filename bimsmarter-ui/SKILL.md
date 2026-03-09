@@ -3,11 +3,6 @@ name: bimsmarter-ui
 description: Charte graphique et composants UI BIMSmarter. Utilise ce skill quand l'utilisateur veut créer une nouvelle page, un nouveau composant React, ou mettre en cohérence une app existante avec le style BIMSmarter. Si l'utilisateur mentionne "style", "charte", "dark theme", "glass panel", "même style que les autres apps", "fond sombre", utilise ce skill immédiatement pour générer du code cohérent avec la charte.
 ---
 
----
-name: bimsmarter-ui
-description: Charte graphique et composants UI BIMSmarter. Utilise ce skill quand l'utilisateur veut créer une nouvelle page, un nouveau composant React, ou mettre en cohérence une app existante avec le style BIMSmarter. Si l'utilisateur mentionne "style", "charte", "dark theme", "glass panel", "même style que les autres apps", "fond sombre", utilise ce skill immédiatement pour générer du code cohérent avec la charte.
----
-
 # BIMSmarter UI — Charte graphique
 
 **Règle absolue** : toute nouvelle page ou composant doit respecter cette charte. Ne jamais inventer un style différent.
