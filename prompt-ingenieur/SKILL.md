@@ -111,9 +111,57 @@ Level 4 — Expert: Multi-domain, ambiguous inputs, chain-of-thought mandatory (
 
 ```
 
-
-
 **Critical rule**: Match prompt complexity to task complexity. A Level 1 task with a Level 4 prompt wastes tokens and confuses the LLM. A Level 4 task with a Level 1 prompt guarantees failure.
+
+### Ultrathink Trigger Rule
+
+**`ultrathink`** is a keyword that forces the LLM into maximum reasoning effort. It costs more tokens — use it only when the task genuinely needs it.
+
+**WHEN TO ADD `ultrathink` to the prompt** (Level 3–4 only):
+
+| Situation | Add ultrathink? | Why |
+|-----------|----------------|-----|
+| Architecture decision with multiple tradeoffs | ✅ YES | Requires weighing competing constraints simultaneously |
+| Root cause diagnosis (bug, security flaw, perf issue) | ✅ YES | Multi-hypothesis elimination needed |
+| Prompt design for a complex agent/workflow | ✅ YES | The meta-task is itself Level 4 |
+| Security audit of a full codebase | ✅ YES | Multi-surface, adversarial reasoning |
+| "Generate X based on Y" (simple generation) | ❌ NO | Wastes tokens, doesn't improve output |
+| Summarize / translate / reformat | ❌ NO | Linear task, no reasoning benefit |
+| Level 1–2 tasks of any kind | ❌ NO | Can actually reduce accuracy |
+
+**How to embed it in a prompt** — place it in the Task Instructions section, on the first reasoning step:
+
+```
+ultrathink
+
+Perform the following steps:
+1. [First reasoning step — the hardest one]
+...
+```
+
+Or inline when only one step needs deep reasoning:
+
+```
+ultrathink — Before answering, reason through all possible failure modes and their likelihood.
+```
+
+**Rule**: Never add `ultrathink` as decoration. If you can't justify WHY maximum reasoning improves this specific task, don't include it.
+
+### Blocking Questions Protocol
+
+When information is missing after the initial brief, DO NOT bury questions in prose. List them explicitly in a dedicated block BEFORE generating anything:
+
+```
+### Questions bloquantes (répondre avant génération)
+- [ ] [Question 1] → impact : [which section of the prompt this unlocks]
+- [ ] [Question 2] → impact : [which section of the prompt this unlocks]
+```
+
+**Rules**:
+- Only list questions that are TRULY blocking — if you can make a reasonable assumption, state the assumption and proceed
+- One question per bullet, no compound questions
+- Always state WHY the answer matters (the "impact" field)
+- Maximum 4 questions — if you need more, your brief is incomplete and you should ask for a global recap instead
 
 
 
@@ -1557,6 +1605,10 @@ When improving an existing prompt:
 
 | Progressive Disclosure | N/A | Consider | Recommended | Required |
 
+| Auto-critique (delivery) | No | Yes | Yes | Yes |
+
+| **ultrathink** | ❌ Never | ❌ Never | ✅ If multi-hypothesis reasoning | ✅ Always |
+
 
 
 ---
@@ -1603,8 +1655,35 @@ When you deliver a prompt to the user, structure your response as:
 
 
 
+### Auto-critique
+
+⭐⭐⭐⭐☆ [X/5 — scored honestly, NEVER give 5/5 on first delivery]
+
+**Points faibles** : [What could still fail or is missing — be specific, no generic praise]
+
+**Pour atteindre 5/5** : [Exactly what information or iteration would make this prompt optimal]
+
+
+
+### Questions bloquantes pour itération
+
+[ONLY if answers would materially improve the prompt — omit this section if the prompt is complete]
+
+- [ ] [Question 1] → impact : [what it would change in the prompt]
+
+- [ ] [Question 2] → impact : [what it would change in the prompt]
+
+
+
 ### Test Suggestions
 
 [3 test inputs the user should try, including one edge case]
 
 ```
+
+### Iteration Protocol
+
+After the user answers blocking questions or provides feedback:
+1. Re-run the full QA checklist (Phase 4) on the updated prompt
+2. Update the Auto-critique score — justify the delta (why did the score change?)
+3. Repeat until Auto-critique reaches 5/5, then deliver the final prompt as a clean standalone block for easy copy-paste, with no surrounding commentary
