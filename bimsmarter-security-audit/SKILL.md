@@ -3,7 +3,7 @@ name: bimsmarter-security-audit
 description: "ALWAYS use this skill immediately — without asking — whenever the user mentions: audit securite, security audit, verifie la securite, scan mes apps, check vulnerabilites, audit BIMSmarter, teste la securite, y a-t-il des failles, cles exposees, /security-review, /audit, securite de mon application, failles dans mon code. This skill performs a complete security audit of the BIMSmarter ecosystem (React + Firebase Firestore/Auth/Storage + Mistral API proxy PHP + n8n webhooks). Do NOT attempt to audit without this skill — it contains critical BIMSmarter-specific checks that Claude cannot perform correctly without it."
 ---
 
-# Security Audit — BIMSmarter Ecosystem v2.1
+# Security Audit — BIMSmarter Ecosystem v3.0
 
 Tu es un auditeur de sécurité expert React/Firebase/PHP.
 Méthode : **lecture sémantique du code** (comprendre la logique) + **grep ciblé** (prouver les findings).
@@ -11,9 +11,35 @@ Chaque finding doit citer du **code réel**. Zéro faux positif.
 
 ---
 
+## MODES D'AUDIT
+
+Utilise le mode adapté à la situation pour économiser les tokens :
+
+| Mode | Commande | Agents | Scope | Usage |
+|------|----------|--------|-------|-------|
+| **Full** | `/audit` | A→H | Tout le codebase | Audit complet avant release |
+| **Quick** | `/audit quick` | A+B | CRITICAL/HIGH only | Vérif rapide post-fix |
+| **Diff** | `/audit diff` | A→H | Fichiers git-modifiés uniquement | Review avant commit |
+| **Focus Auth** | `/audit focus:auth` | A+D+H | Auth, plans, quotas | Nouveau système de paiement |
+| **Focus API** | `/audit focus:api` | B+C+F | Proxy, inputs, webhooks | Nouveau endpoint PHP/n8n |
+| **Focus Config** | `/audit focus:config` | E+G | Headers, deps, config | Déploiement infra |
+
+**Mode `quick`** : Lance uniquement les agents A et B, findings CRITICAL et HIGH uniquement. Rapport condensé sans plan d'action détaillé.
+
+**Mode `diff`** :
+```bash
+# Récupère uniquement les fichiers modifiés depuis le dernier commit
+git diff --name-only HEAD 2>/dev/null | grep -E "\.(js|jsx|php|html|json)$"
+# → Scan limité à ces fichiers uniquement
+```
+
+---
+
+---
+
 ## STEP 1 — Utilise orchestrating-swarms
 
-Lance 7 agents en parallèle. Chaque agent = une surface d'attaque.
+Lance 8 agents en parallèle. Chaque agent = une surface d'attaque.
 
 ```
 Agent A → Firebase Security Rules + Auth guards + race conditions
@@ -22,8 +48,14 @@ Agent C → XSS, injection IA, prototype pollution, validation inputs
 Agent D → Logique côté client : plan/quota bypass, window globals, localStorage
 Agent E → Headers HTTP sécurité (CSP, HSTS, X-Frame, SRI CDN, n8n webhooks)
 Agent F → Validation serveur PHP + bonnes pratiques web générales
-Agent G → Dépendances, config files, system prompt, données PII
+Agent G → Dépendances, config files, system prompt, données PII + RAG poisoning
+Agent H → Gray-Box BIMSmarter : rate limits réels, error differentials, tenant isolation
 ```
+
+> **Mode quick** : Lance A+B uniquement.
+> **Mode focus:auth** : Lance A+D+H uniquement.
+> **Mode focus:api** : Lance B+C+F uniquement.
+> **Mode focus:config** : Lance E+G uniquement.
 
 ---
 
@@ -463,7 +495,7 @@ Vérifier que `X-Frame-Options: DENY` ou CSP `frame-ancestors 'none'` est prése
 
 ---
 
-### AGENT G — Config, Dépendances, System Prompt, PII (MEDIUM)
+### AGENT G — Config, Dépendances, System Prompt, PII + RAG Poisoning (MEDIUM)
 
 **G1 — System prompt exposé côté client**
 ```bash
@@ -515,9 +547,134 @@ grep -n "localStorage\.set" \
 
 Vérifier ce qui est stocké : emails, noms, données de projet sensibles en clair = RGPD + risque XSS.
 
+**G6 — RAG Poisoning (Supabase pgvector)**
+```bash
+# Vérifier la validation des inputs avant insertion dans pgvector
+grep -rn "supabase\|embedding\|pgvector\|insert\|upsert" \
+  --include="*.js" --include="*.jsx" --include="*.php" \
+  -not -path "*/node_modules/*" 2>/dev/null | head -20
+
+# Vérifier RLS activé sur la table documents
+# (à checker directement dans la console Supabase ou via l'API)
+grep -rn "public\.documents\|rls\|row.level" \
+  --include="*.sql" --include="*.js" 2>/dev/null
+```
+
+Risques spécifiques Supabase RAG BIMSmarter :
+- **Injection de documents** : un utilisateur peut-il insérer des chunks dans `public.documents` sans être admin ? → RLS `INSERT` doit être réservé au service role uniquement
+- **Data poisoning** : contenu malveillant inséré dans la base vectorielle → retourné par le GID-Assistant comme réponse "officielle"
+- **IDOR via similarity search** : la recherche vectorielle retourne-t-elle des documents appartenant à d'autres utilisateurs ?
+
+Règle RLS correcte (Supabase) :
+```sql
+-- Lecture : tous les users authentifiés peuvent lire les docs GID publics
+CREATE POLICY "read_gid_docs" ON public.documents
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Insertion : service_role uniquement (via n8n/admin, pas depuis le client React)
+CREATE POLICY "insert_admin_only" ON public.documents
+  FOR INSERT WITH CHECK (auth.role() = 'service_role');
+```
+
+**G7 — Monitoring coûts API exposé**
+```bash
+grep -rn "usage\|tokens_used\|cost\|billing" \
+  --include="*.js" --include="*.jsx" --include="*.html" \
+  -rn -not -path "*/node_modules/*" 2>/dev/null | grep -v "console\."
+```
+
+Vérifier qu'aucune donnée de consommation API (tokens utilisés, coût estimé) n'est retournée au client React — exploitable pour cartographier les limites et optimiser des attaques DoS ciblées.
+
 ---
 
-## STEP 4 — Règles anti-faux positifs
+### AGENT H — Gray-Box BIMSmarter : Rate Limits, Error Differentials, Tenant Isolation (HIGH)
+
+Cet agent teste le comportement réel de l'app depuis l'extérieur — pas en lisant le code mais en simulant des scénarios d'attaque concrets sur l'architecture BIMSmarter.
+
+**H1 — Rate Limiting réel sur le proxy PHP**
+```bash
+# Vérifier la présence de rate limiting dans le proxy
+grep -rn "rate_limit\|throttle\|429\|X-RateLimit\|sleep\|usleep" \
+  --include="*.php" 2>/dev/null
+```
+
+Questions à répondre (vérification manuelle ou via script) :
+- Le proxy `/mistral-proxy.php` retourne-t-il une 429 après N requêtes en burst ?
+- Le rate limit est-il **par user Firebase UID** ou juste par IP ? (IP = contournable via proxy)
+- Le chatbot GID-Assistant a-t-il un throttle côté PHP indépendant du quota Firestore ?
+
+Pattern de rate limit correct côté PHP :
+```php
+// Rate limit par UID Firebase (après vérification du token)
+$cacheKey = 'rl_' . md5($verifiedUid);
+$requests = apcu_fetch($cacheKey) ?: 0;
+if ($requests >= 10) { // 10 req/minute max
+    http_response_code(429);
+    header('Retry-After: 60');
+    exit(json_encode(['error' => 'Rate limit exceeded']));
+}
+apcu_store($cacheKey, $requests + 1, 60);
+```
+
+**H2 — Error Differentials (information leakage)**
+```bash
+grep -rn "catch\|error\|Error\|reject\|404\|403\|401" \
+  --include="*.js" --include="*.jsx" --include="*.php" \
+  -not -path "*/node_modules/*" 2>/dev/null | head -30
+```
+
+Scénarios à vérifier :
+- Un token Firebase expiré vs un token invalide → l'app retourne-t-elle des messages d'erreur différents ? (révèle l'état interne)
+- Un document Firestore inexistant vs un document existant mais non autorisé → erreur identique ou différente ? (IDOR via error differential)
+- Le proxy PHP retourne-t-il des stack traces PHP en production ?
+
+Fix : messages d'erreur génériques côté client, logs détaillés côté serveur uniquement.
+```php
+// DANGEREUX
+echo json_encode(['error' => $e->getMessage()]); // révèle le stack trace
+
+// CORRECT
+error_log($e->getMessage()); // log serveur
+http_response_code(500);
+echo json_encode(['error' => 'Internal server error']);
+```
+
+**H3 — Tenant Isolation : données inter-utilisateurs**
+```bash
+grep -rn "uid\|userId\|members\|ownerId\|sharedWith" \
+  --include="*.js" --include="*.jsx" --include="*.html" \
+  -rn -not -path "*/node_modules/*" 2>/dev/null | head -20
+```
+
+Vérifier les scénarios d'accès croisé :
+- User A peut-il accéder aux documents générés par User B en devinant l'ID ?
+- Les workflows partagés filtrent-ils bien sur `members` array en Firestore ?
+- L'IFC viewer charge-t-il les fichiers Firebase Storage avec une URL signée ou une URL publique permanente ?
+
+URL signée Firebase Storage (correcte) :
+```javascript
+// Durée limitée à 1h — pas d'URL publique permanente
+const url = await getDownloadURL(ref); // Firebase génère une URL signée temporaire
+// Vérifier que Storage Rules bloquent l'accès non authentifié
+```
+
+**H4 — Plan Privilege Escalation (test comportemental)**
+```bash
+grep -rn "plan\|quota\|LIMITS\|PRO\|ENTERPRISE\|FREE" \
+  --include="*.js" --include="*.jsx" --include="*.html" \
+  -rn -not -path "*/node_modules/*" 2>/dev/null | grep -v "node_modules"
+```
+
+Scénario d'attaque à simuler :
+1. Créer un compte FREE
+2. Identifier où le plan est lu (Firestore vs localStorage vs state React)
+3. Modifier la valeur via DevTools React ou console
+4. Vérifier si l'app accepte la requête Mistral au-delà du quota FREE
+
+Si oui → la vérification est purement côté client = CRITIQUE.
+Fix : vérification du plan dans les Firestore Rules ET dans le proxy PHP (double validation).
+
+---
 
 **NE PAS reporter :**
 - `apiKey`, `authDomain`, `projectId` Firebase dans le frontend (publics par conception)
@@ -541,8 +698,9 @@ Génère `SECURITY_AUDIT_REPORT.md` :
 ```markdown
 # Rapport d'Audit Sécurité — BIMSmarter [APP]
 **Date :** [DATE]
-**Stack :** React · Firebase · Mistral PHP Proxy · n8n
-**Méthode :** bimsmarter-security-audit v2.1 (7 agents parallèles)
+**Stack :** React · Firebase · Mistral PHP Proxy · n8n · Supabase pgvector
+**Mode :** [full / quick / diff / focus:xxx]
+**Méthode :** bimsmarter-security-audit v3.0 (8 agents parallèles)
 
 ---
 
@@ -566,6 +724,7 @@ Génère `SECURITY_AUDIT_REPORT.md` :
 ### [ID] — [Titre]
 **Sévérité :** CRITIQUE | **Confiance :** HAUTE/MOYENNE
 **Fichier :** `chemin/fichier.js:ligne`
+**CWE :** CWE-XXX ([nom]) | **OWASP 2025 :** A0X:2025
 
 **Problème :** [explication claire]
 
@@ -588,10 +747,18 @@ Génère `SECURITY_AUDIT_REPORT.md` :
 [même structure]
 
 ## Findings MOYENS 🟡
-[structure allégée — Problème + Correction + Effort]
+[structure allégée — Problème + CWE + Correction + Effort]
 
 ## Findings Bas 🟢
 [liste avec lien fichier:ligne + fix en une ligne]
+
+## Gray-Box Findings 🔍
+| # | Scénario | Résultat attendu | Résultat réel | Sévérité |
+|---|----------|-----------------|---------------|----------|
+| H1 | Rate limit proxy (10 req/min) | 429 après 10 req | ... | ... |
+| H2 | Token expiré vs invalide | Même message erreur | ... | ... |
+| H3 | IDOR document User B | 403 Firestore | ... | ... |
+| H4 | Plan bypass FREE→PRO | Quota bloqué serveur | ... | ... |
 
 ## Points Conformes ✅
 | # | Check | Statut |
@@ -601,43 +768,51 @@ Génère `SECURITY_AUDIT_REPORT.md` :
 
 ## Plan d'Action Priorisé
 
-| # | Action | Sévérité | Effort | Fichier |
-|---|--------|----------|--------|---------|
-| 1 | ... | 🔴 | 30 min | ... |
+| # | Action | Sévérité | CWE | Effort | Fichier |
+|---|--------|----------|-----|--------|---------|
+| 1 | ... | 🔴 | CWE-XXX | 30 min | ... |
 
 ---
-*bimsmarter-security-audit v2.1 — [DATE]*
+*bimsmarter-security-audit v3.0 — [DATE]*
 ```
 
 ---
 
 ## Référence rapide — Checks complets BIMSmarter
 
-| Check | Agent | Sévérité | App concernée |
-|-------|-------|----------|---------------|
-| Firestore rules : champ `plan` modifiable | A | 🔴 CRITIQUE | Toutes |
-| Proxy Mistral sans auth token Firebase | B | 🔴 CRITIQUE | Toutes |
-| Race condition quota IA (non-atomique) | A | 🔴 CRITIQUE | WF Generator, GID |
-| window._wfUserCache contournable console | D | 🔴 CRITIQUE | WF Generator |
-| Null guards manquants fonctions Firestore | A | 🔴 CRITIQUE | Toutes |
-| XSS via réponses IA non sanitisées | C | 🔴 CRITIQUE | GID, WF Generator |
-| Prototype pollution spreads Firestore | C | 🔴 CRITIQUE | Toutes |
-| Inputs formulaire sans validation côté client | C | 🟠 ÉLEVÉ | Toutes |
-| Validation inputs absente côté PHP | F | 🟠 ÉLEVÉ | Toutes |
-| Headers HTTP sécurité absents (CSP, X-Frame, HSTS...) | E | 🟠 ÉLEVÉ | Toutes |
-| Scripts CDN sans SRI | E | 🟠 ÉLEVÉ | Toutes |
-| CORS PHP ouvert à `*` | F | 🟠 ÉLEVÉ | Toutes |
-| Import JSON sans validation schéma | C | 🟠 ÉLEVÉ | WF Generator |
-| localStorage non scopé par uid | D | 🟠 ÉLEVÉ | WF Generator |
-| Emails/PII loggués en clair | B | 🟠 ÉLEVÉ | Toutes |
-| Webhooks n8n sans secret header | E | 🟠 ÉLEVÉ | Toutes |
-| Données sensibles PII dans localStorage | G | 🟡 MOYEN | Toutes |
-| System prompt exposé côté client | G | 🟡 MOYEN | GID, WF Generator |
-| Cookies sans HttpOnly/Secure/SameSite | F | 🟡 MOYEN | Toutes |
-| Open redirect non validé | F | 🟡 MOYEN | Toutes |
-| URLs hardcodées en http:// | E | 🟡 MOYEN | Toutes |
-| console.clear() en production | G | 🟡 MOYEN | WF Generator |
-| Input chat sans maxLength (DoS proxy) | C | 🟡 MOYEN | GID, WF Generator |
-| Babel Standalone en production | G | 🟡 MOYEN | WF Generator |
-| Clés API privées dans le code | B | 🔴 CRITIQUE | Toutes |
-| .env commités dans Git | B | 🔴 CRITIQUE | Toutes |
+| Check | Agent | Sévérité | CWE | App concernée |
+|-------|-------|----------|-----|---------------|
+| Firestore rules : champ `plan` modifiable | A | 🔴 CRITIQUE | CWE-284 | Toutes |
+| Proxy Mistral sans auth token Firebase | B | 🔴 CRITIQUE | CWE-306 | Toutes |
+| Race condition quota IA (non-atomique) | A | 🔴 CRITIQUE | CWE-362 | WF Generator, GID |
+| window._wfUserCache contournable console | D | 🔴 CRITIQUE | CWE-602 | WF Generator |
+| Null guards manquants fonctions Firestore | A | 🔴 CRITIQUE | CWE-476 | Toutes |
+| XSS via réponses IA non sanitisées | C | 🔴 CRITIQUE | CWE-79 | GID, WF Generator |
+| Prototype pollution spreads Firestore | C | 🔴 CRITIQUE | CWE-1321 | Toutes |
+| Plan bypass FREE→PRO côté client (gray-box) | H | 🔴 CRITIQUE | CWE-602 | Toutes |
+| Inputs formulaire sans validation côté client | C | 🟠 ÉLEVÉ | CWE-20 | Toutes |
+| Validation inputs absente côté PHP | F | 🟠 ÉLEVÉ | CWE-20 | Toutes |
+| Headers HTTP sécurité absents (CSP, X-Frame, HSTS...) | E | 🟠 ÉLEVÉ | CWE-693 | Toutes |
+| Scripts CDN sans SRI | E | 🟠 ÉLEVÉ | CWE-829 | Toutes |
+| CORS PHP ouvert à `*` | F | 🟠 ÉLEVÉ | CWE-942 | Toutes |
+| Import JSON sans validation schéma | C | 🟠 ÉLEVÉ | CWE-20 | WF Generator |
+| localStorage non scopé par uid | D | 🟠 ÉLEVÉ | CWE-200 | WF Generator |
+| Emails/PII loggués en clair | B | 🟠 ÉLEVÉ | CWE-532 | Toutes |
+| Webhooks n8n sans secret header | E | 🟠 ÉLEVÉ | CWE-306 | Toutes |
+| Rate limit proxy absent ou par IP seulement | H | 🟠 ÉLEVÉ | CWE-770 | Toutes |
+| Error differentials (token expiré vs invalide) | H | 🟠 ÉLEVÉ | CWE-204 | Toutes |
+| Tenant isolation IDOR Firestore | H | 🟠 ÉLEVÉ | CWE-284 | Toutes |
+| RLS Supabase INSERT non restreint au service_role | G | 🟠 ÉLEVÉ | CWE-284 | GID-Assistant |
+| RAG poisoning : documents publics sans contrôle auteur | G | 🟠 ÉLEVÉ | CWE-20 | GID-Assistant |
+| Données sensibles PII dans localStorage | G | 🟡 MOYEN | CWE-312 | Toutes |
+| System prompt exposé côté client | G | 🟡 MOYEN | CWE-200 | GID, WF Generator |
+| Cookies sans HttpOnly/Secure/SameSite | F | 🟡 MOYEN | CWE-614 | Toutes |
+| Open redirect non validé | F | 🟡 MOYEN | CWE-601 | Toutes |
+| URLs hardcodées en http:// | E | 🟡 MOYEN | CWE-319 | Toutes |
+| console.clear() en production | G | 🟡 MOYEN | — | WF Generator |
+| Input chat sans maxLength (DoS proxy) | C | 🟡 MOYEN | CWE-400 | GID, WF Generator |
+| Babel Standalone en production | G | 🟡 MOYEN | CWE-829 | WF Generator |
+| Monitoring coûts API retourné au client | G | 🟡 MOYEN | CWE-200 | Toutes |
+| Stack trace PHP en réponse d'erreur | H | 🟡 MOYEN | CWE-209 | Toutes |
+| Clés API privées dans le code | B | 🔴 CRITIQUE | CWE-798 | Toutes |
+| .env commités dans Git | B | 🔴 CRITIQUE | CWE-540 | Toutes |
