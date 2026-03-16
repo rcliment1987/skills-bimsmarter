@@ -119,18 +119,23 @@ service cloud.firestore {
     // FONCTIONS UTILITAIRES
     // ─────────────────────────────────────────────
 
+    // Vérifie que la mise à jour ne touche QUE des champs non-sensibles.
+    // Le plan, stripeCustomerId et role ne peuvent être modifiés que par
+    // le backend (N8N via Admin SDK) — jamais depuis le navigateur.
     // Champs autorisés côté client : displayName, lastSeen, favoriteWorkflows, aiQuota.
-    // Le plan, stripeCustomerId et role sont BLOQUÉS — seul N8N via Admin SDK peut les modifier.
     function safeUserFields() {
-      return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['displayName', 'lastSeen', 'favoriteWorkflows', 'aiQuota']);
-    }
+  return request.resource.data.diff(resource.data).affectedKeys()
+    .hasOnly(['displayName', 'lastSeen', 'favoriteWorkflows', 'aiQuota', 
+              'codes', 'documents', 'updatedAt']);
+}
 
+    // Vérifie que l'utilisateur connecté est bien le propriétaire du document.
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Vérifie membership dans la liste members[] du projet parent (pour sous-collections)
+    // Vérifie que l'utilisateur connecté est membre du projet.
+    // Utilisé pour les sous-collections (workflows, documents d'un projet).
     function isMember(projectId) {
       return request.auth != null
           && request.auth.uid in get(
@@ -138,65 +143,118 @@ service cloud.firestore {
              ).data.members;
     }
 
+
     // ─────────────────────────────────────────────
     // COLLECTION : users
     // ─────────────────────────────────────────────
+
     match /users/{userId} {
-      // Lecture : tout user connecté (nécessaire pour vérifier le plan d'un invité)
+
+      // Lecture : tout utilisateur connecté peut lire le profil d'un autre.
+      // Nécessaire pour afficher le nom/plan d'un invité dans gestion-projet
+      // (ex : vérifier si un membre invité est Pro avant de lui donner accès).
       allow read: if request.auth != null;
 
-      // Création : uniquement son propre doc, plan forcé à 'free'
-      // → empêche de se créer directement un compte Pro/Admin
+      // Création : seulement son propre document, et uniquement avec plan 'free'.
+      // Empêche qu'un utilisateur se crée directement un compte Pro ou Admin
+      // en manipulant la requête. Le plan ne peut monter que via le webhook Stripe.
       allow create: if isOwner(userId)
                     && request.resource.data.plan == 'free';
 
-      // Mise à jour : uniquement champs non-sensibles (safeUserFields)
-      // → plan et stripeCustomerId ne peuvent être modifiés que par N8N/Admin SDK
+      // Mise à jour : seulement son propre document, et seulement les champs
+      // non-sensibles (voir safeUserFields). Le champ 'plan' est bloqué ici —
+      // seul N8N via Admin SDK peut le modifier (upgrade/downgrade Stripe).
       allow update: if isOwner(userId) && safeUserFields();
 
-      // Suppression : interdite depuis le client
+      // Suppression : interdite depuis le client.
+      // La suppression d'un compte passe par une procédure admin dédiée.
       allow delete: if false;
     }
 
-    // Workflows personnels d'un user (distincts des workflows de projet)
+
+    // ─────────────────────────────────────────────
+    // SOUS-COLLECTION : workflows personnels d'un user
+    // (workflows sauvegardés par l'utilisateur dans son profil,
+    //  distincts des workflows d'un projet partagé)
+    // ─────────────────────────────────────────────
+
     match /users/{userId}/workflows/{workflowId} {
+      // Lecture et écriture : uniquement le propriétaire du profil.
       allow read, write: if isOwner(userId);
     }
+
 
     // ─────────────────────────────────────────────
     // COLLECTION : projects
     // ─────────────────────────────────────────────
+
     match /projects/{projectId} {
-      // Lecture : membres uniquement (members[] inclut ownerId + invités)
+
+      // Lecture : tout utilisateur connecté qui est dans la liste members[].
+      // La liste members[] inclut le propriétaire + les invités Pro.
+      // Un utilisateur non-membre ne peut pas lire le projet (ni son nom, ni son contenu).
       allow read: if request.auth != null
                   && request.auth.uid in resource.data.members;
 
-      // Création : tout user connecté, doit se déclarer ownerId
-      // La limite projets (Free=1, Pro=5) est gérée par PlanManager côté app
+      // Création : tout utilisateur connecté peut créer un projet,
+      // à condition de se déclarer lui-même comme ownerId.
+      // La limite du nombre de projets (Free = 1, Pro = 5) est gérée
+      // côté applicatif par PlanManager — pas dans les règles Firestore.
       allow create: if request.auth != null
                     && request.auth.uid == request.resource.data.ownerId;
 
-      // Mise à jour : uniquement le propriétaire
+      // Mise à jour : uniquement le propriétaire du projet (ownerId).
+      // Les membres invités peuvent lire mais pas modifier la structure du projet.
       allow update: if request.auth != null
                     && request.auth.uid == resource.data.ownerId;
 
-      // Suppression : uniquement le propriétaire
+      // Suppression : uniquement le propriétaire du projet.
       allow delete: if request.auth != null
                     && request.auth.uid == resource.data.ownerId;
     }
 
-    // Workflows d'un projet partagé (étapes BIM, livrables)
+
+    // ─────────────────────────────────────────────
+    // SOUS-COLLECTION : workflows d'un projet partagé
+    // (étapes BIM, livrables, séquences de travail liées à un projet)
+    // ─────────────────────────────────────────────
+
     match /projects/{projectId}/workflows/{workflowId} {
+      // Lecture et écriture : tout membre du projet parent.
+      // isMember() relit le document projet pour vérifier la liste members[].
       allow read, write: if isMember(projectId);
     }
 
-    // Documents ISO 19650 d'un projet partagé
+
+    // ─────────────────────────────────────────────
+    // SOUS-COLLECTION : documents d'un projet partagé
+    // (documents ISO 19650 générés par bim-document-generator,
+    //  liés à un projet dans gestion-projet)
+    // ─────────────────────────────────────────────
+
     match /projects/{projectId}/documents/{docId} {
+      // Lecture et écriture : tout membre du projet parent.
+      // Même logique que pour les workflows — accès partagé entre membres.
       allow read, write: if isMember(projectId);
+    }
+    
+    // ─────────────────────────────────────────────
+    // COLLECTION : analyses (SoumissionAI)
+    // ─────────────────────────────────────────────
+    match /analyses/{docId} {
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
     }
 
   }
 }
+
 ```
 
 ### Points clés de sécurité
