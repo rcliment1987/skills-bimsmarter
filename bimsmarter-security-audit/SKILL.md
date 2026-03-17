@@ -204,14 +204,14 @@ Vérifier dans le proxy :
 
 Requête DANGEREUSE (sans auth) :
 ```javascript
-fetch('/mistral-proxy.php', { headers: { 'Content-Type': 'application/json' } })
+fetch('/mistral-proxy-local.php', { headers: { 'Content-Type': 'application/json' } })
 // proxy accessible par n'importe qui depuis curl
 ```
 
 Fix frontend :
 ```javascript
 const idToken = await firebase.auth().currentUser.getIdToken();
-fetch('/mistral-proxy.php', {
+fetch('/mistral-proxy-local.php', {
   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` }
 })
 ```
@@ -356,7 +356,7 @@ Headers REQUIS — à envoyer côté PHP (préféré) ou HTML meta :
 
 ```php
 <?php
-// Dans mistral-proxy.php et tout fichier PHP exposé
+// Dans mistral-proxy-local.php et tout fichier PHP exposé
 header("X-Frame-Options: DENY");
 header("X-Content-Type-Options: nosniff");
 header("Referrer-Policy: strict-origin-when-cross-origin");
@@ -413,7 +413,7 @@ URLs en `http://` hardcodées en production → MitM possible.
 find . -name "*.php" -exec grep -n "POST\|\$_GET\|\$_REQUEST\|json_decode\|file_get_contents" {} \; 2>/dev/null
 ```
 
-Vérifier dans `mistral-proxy.php` :
+Vérifier dans `mistral-proxy-local.php` :
 - `Content-Type: application/json` vérifié avant traitement ?
 - Body parsé avec gestion d'erreur (`json_decode` + vérif null) ?
 - Longueur du body limitée (protection DoS) ?
@@ -599,7 +599,7 @@ grep -rn "rate_limit\|throttle\|429\|X-RateLimit\|sleep\|usleep" \
 ```
 
 Questions à répondre (vérification manuelle ou via script) :
-- Le proxy `/mistral-proxy.php` retourne-t-il une 429 après N requêtes en burst ?
+- Le proxy `mistral-proxy-local.php` retourne-t-il une 429 après N requêtes en burst ?
 - Le rate limit est-il **par user Firebase UID** ou juste par IP ? (IP = contournable via proxy)
 - Le chatbot GID-Assistant a-t-il un throttle côté PHP indépendant du quota Firestore ?
 
