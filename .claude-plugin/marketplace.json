@@ -75,6 +75,11 @@
       "name": "orchestrating-swarms",
       "source": "./orchestrating-swarms",
       "description": "Orchestration multi-agents Claude Code : TeammateTool, Task system, patterns parallel/pipeline/swarm"
+    },
+    {
+      "name": "superpowers",
+      "source": "./superpowers",
+      "description": "Core skills library (obra/superpowers v5.0.5) : TDD, systematic debugging, brainstorming, subagent-driven development, code review, git worktrees"
     }
   ]
 }
