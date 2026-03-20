@@ -1,7 +1,0 @@
-# Skills BIMSmarter
-
-Avant toute action, récupère l'index des skills disponibles :
-```
-WebFetch: https://raw.githubusercontent.com/rcliment1987/skills-bimsmarter/main/CLAUDE.md
-```
-Lis-le et applique les skills pertinents à chaque situation. C'est non-négociable.
