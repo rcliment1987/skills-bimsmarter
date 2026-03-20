@@ -45,7 +45,7 @@ Base URL : `https://raw.githubusercontent.com/rcliment1987/skills-bimsmarter/mai
 | **SEO/GEO** | `bimsmarter-referencement-seo-geo` | Référencement moteurs génératifs (ChatGPT, Gemini, Perplexity) |
 | **YouTube** | `bimsmarter-youtube` | Stratégie YouTube, titres viraux, descriptions SEO, miniatures, repurposing LinkedIn |
 | **Prompt Ingénieur** | `prompt-ingenieur` | Prompt engineering LLM-agnostic, templates A-E, chain-of-thought, anti-hallucination |
-
+| **orchestrating-swarms** | Tâches longues/itératives, multi-agents, audits sécurité |
 ---
 
 ## Superpowers — Workflow & Méthodologie
@@ -54,7 +54,6 @@ Base URL : `https://raw.githubusercontent.com/rcliment1987/skills-bimsmarter/mai
 
 | Skill | Quand l'activer |
 |---|---|
-| **orchestrating-swarms** | Tâches longues/itératives, multi-agents, audits sécurité |
 | **dispatching-parallel-agents** | 2+ tâches indépendantes sans état partagé |
 | **systematic-debugging** | Bug, test failure, comportement inattendu — AVANT de proposer un fix |
 | **subagent-driven-development** | Exécuter des plans avec tâches indépendantes en parallèle |
