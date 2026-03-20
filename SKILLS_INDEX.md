@@ -44,12 +44,7 @@ Base URL : `https://raw.githubusercontent.com/rcliment1987/skills-bimsmarter/mai
 | **Gestion Website** | `bimsmarter-gestion-website` | SEO/GEO bimsmarter.eu, Hostinger/Zyro, Schema.org, E-E-A-T. Réf: `references/geo-seo-strategie.md` |
 | **SEO/GEO** | `bimsmarter-referencement-seo-geo` | Référencement moteurs génératifs (ChatGPT, Gemini, Perplexity) |
 | **YouTube** | `bimsmarter-youtube` | Stratégie YouTube, titres viraux, descriptions SEO, miniatures, repurposing LinkedIn |
-| **LinkedIn** | `linkedin-bimsmarter` | Posts LinkedIn, ghostwriting, lead-gen audience AEC Benelux |
-| **Email Responder** | `email-responder-bimsmarter` | Réponses emails clients/prospects, variantes via message_compose |
-| **Profil Renaud** | `renaud-profile` | Bio, pitch, contenu personnalisé, contexte personnel (frontalier, autodidacte, père) |
 | **Prompt Ingénieur** | `prompt-ingenieur` | Prompt engineering LLM-agnostic, templates A-E, chain-of-thought, anti-hallucination |
-| **MCP BIMSmarter** | `bimsmarter-mcp` | Serveurs MCP, tools LLM, orchestration IA, intégration Mistral/données BIMSmarter |
-| **Infographie** | `baoyu-infographic` | Infographies professionnelles, 20 layouts, 17 styles visuels |
 
 ---
 
