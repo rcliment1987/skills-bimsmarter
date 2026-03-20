@@ -22,7 +22,7 @@ curl -s https://raw.githubusercontent.com/rcliment1987/skills-bimsmarter/main/{d
 curl -s https://raw.githubusercontent.com/rcliment1987/skills-bimsmarter/main/{dossier}/references/{fichier}.md
 ```
 
-> ⚠️ Ne jamais utiliser `WebFetch` — cet outil n'existe pas dans Claude Code. Toujours passer par `curl` via l'outil Bash.
+> ⚠️ Toujours utiliser `curl -s` via l'outil Bash, jamais `WebFetch`. Raison : WebFetch passe le contenu par un modèle IA qui peut résumer ou tronquer les instructions. `curl -s` retourne le texte brut intégral — essentiel pour suivre un SKILL.md à la lettre.
 
 ---
 
