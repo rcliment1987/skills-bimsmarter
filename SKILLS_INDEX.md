@@ -46,6 +46,7 @@ Base URL : `https://raw.githubusercontent.com/rcliment1987/skills-bimsmarter/mai
 | **YouTube** | `bimsmarter-youtube` | Stratégie YouTube, titres viraux, descriptions SEO, miniatures, repurposing LinkedIn |
 | **Prompt Ingénieur** | `prompt-ingenieur` | Prompt engineering LLM-agnostic, templates A-E, chain-of-thought, anti-hallucination |
 | **orchestrating-swarms** | Tâches longues/itératives, multi-agents, audits sécurité |
+| **bimsmarter-check-list-app** | Avant de créer une application ou un code, avant de modifier une applicaiton ou un code |
 ---
 
 ## Superpowers — Workflow & Méthodologie
