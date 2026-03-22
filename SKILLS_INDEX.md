@@ -11,6 +11,7 @@ Avant toute action ou réponse, vérifie si un ou plusieurs skills s'appliquent 
 Si un skill s'applique (même 1% de chance), tu DOIS :
 1. Récupérer le SKILL.md correspondant via `curl` (Bash) depuis GitHub raw URL
 2. Lire et suivre ses instructions AVANT de commencer à travailler
+3. Faire un check de l'avancement des agents ou de la commande en cours toutes les 45 secondes pour ne pas tomber en timeout
 
 **Comment récupérer un skill :**
 ```bash
