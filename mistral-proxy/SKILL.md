@@ -155,7 +155,7 @@ $n8nUrl = 'https://n8n.bimsmarter.eu/webhook/rag-apps';
 
 ```php
 // MISTRAL — 1 clé (plan payant 6 req/sec)
-$MISTRAL_KEYS = ['3T3OxFwRPg20i9OfHQjbjwizuSKw57dX'];
+$MISTRAL_KEYS = ['1 clé'];
 
 // GROQ FALLBACK — 5 clés en rotation
 $GROQ_KEYS = [5 clés configurées];
