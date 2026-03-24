@@ -3,11 +3,6 @@ name: bimsmarter-security-audit
 description: "ALWAYS use this skill immediately — without asking — whenever the user mentions: audit securite, security audit, verifie la securite, scan mes apps, check vulnerabilites, audit BIMSmarter, teste la securite, y a-t-il des failles, cles exposees, /security-review, /audit, securite de mon application, failles dans mon code. This skill performs a complete security audit of the BIMSmarter ecosystem (React + Firebase Firestore/Auth/Storage + Mistral API proxy PHP + n8n webhooks). Do NOT attempt to audit without this skill — it contains critical BIMSmarter-specific checks that Claude cannot perform correctly without it."
 ---
 
----
-name: bimsmarter-security-audit
-description: "ALWAYS use this skill immediately — without asking — whenever the user mentions: audit securite, security audit, verifie la securite, scan mes apps, check vulnerabilites, audit BIMSmarter, teste la securite, y a-t-il des failles, cles exposees, /security-review, /audit, securite de mon application, failles dans mon code. This skill performs a complete security audit of the BIMSmarter ecosystem (React + Firebase Firestore/Auth/Storage + Mistral API proxy PHP + n8n webhooks). Do NOT attempt to audit without this skill — it contains critical BIMSmarter-specific checks that Claude cannot perform correctly without it."
----
-
 # Security Audit — BIMSmarter Ecosystem v3.0
 
 Tu es un auditeur de sécurité expert React/Firebase/PHP.
