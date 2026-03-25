@@ -42,6 +42,16 @@ git diff --name-only HEAD 2>/dev/null | grep -E "\.(js|jsx|php|html|json)$"
 
 Lance 9 agents en parallèle. Chaque agent = une surface d'attaque.
 
+⚠️ **INSTRUCTION CRITIQUE POUR CHAQUE SUB-AGENT :**
+> Les sub-agents (A→I) sont lancés par le coordinateur via orchestrating-swarms.
+> Chaque sub-agent NE DOIT PAS :
+> - Lire le CLAUDE.md ni le SKILLS_INDEX
+> - Tenter de lancer orchestrating-swarms (un sub-agent ne peut PAS lancer d'autres sub-agents)
+> - Récupérer ou relire les fichiers SKILL.md (le coordinateur fournit déjà le contexte nécessaire)
+
+> Chaque sub-agent doit UNIQUEMENT exécuter ses checks assignés (grep, cat, lecture de code) et retourner ses findings.
+> Le coordinateur DOIT inclure cette instruction dans le prompt de chaque agent.
+
 ```
 Agent A → Firebase Security Rules + Auth guards + race conditions
 Agent B → API Keys, secrets, proxy PHP Mistral + données sensibles exposées
