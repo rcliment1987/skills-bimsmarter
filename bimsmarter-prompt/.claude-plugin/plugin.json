@@ -1,8 +1,0 @@
-{
-  "name": "bimsmarter-prompt",
-  "description": "Elite prompt engineering pour apps BIMSmarter et stack Mistral/Groq/n8n",
-  "version": "1.0.0",
-  "author": {
-    "name": "Renaud Climent"
-  }
-}
